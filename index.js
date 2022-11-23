@@ -17,8 +17,7 @@ app.get("/", (req, res) => {
 
 // mongodb connection
 
-const uri =
-  "mongodb+srv://<username>:<password>@cluster0.nk3n7xe.mongodb.net/?retryWrites=true&w=majority";
+const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.nk3n7xe.mongodb.net/?retryWrites=true&w=majority`;
 const client = new MongoClient(uri, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
@@ -29,6 +28,23 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
     const userCollection = client.db("phonomania").collection("users");
+
+    // set user and send jwt token
+    app.post("/users", async (req, res) => {
+      const user = req.body;
+      const email = user.email;
+
+      const query = { email: email };
+      const savedUser = await userCollection.findOne(query);
+      const token = jwt.sign(user, process.env.ACCESS_TOKEN, {
+        expiresIn: "1d",
+      });
+      if (savedUser) {
+        return res.send({ token });
+      }
+      const result = await userCollection.insertOne(user);
+      res.send({ result, token });
+    });
   } finally {
   }
 }
