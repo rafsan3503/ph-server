@@ -4,7 +4,7 @@ const cors = require("cors");
 const jwt = require("jsonwebtoken");
 const port = process.env.PORT || 5000;
 require("dotenv").config();
-const { MongoClient, ServerApiVersion } = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 
 // middleWare
 app.use(cors());
@@ -31,6 +31,8 @@ async function run() {
     const userCollection = client.db("phonomania").collection("users");
     // products collection
     const productsCollection = client.db("phonomania").collection("products");
+    // category collection
+    const categoryCollection = client.db("phonomania").collection("categories");
 
     // set user and send jwt token
     app.post("/users", async (req, res) => {
@@ -49,10 +51,47 @@ async function run() {
       res.send({ result, token });
     });
 
+    // get categories
+    app.get("/categories", async (req, res) => {
+      const query = {};
+      const categories = await categoryCollection.find(query).toArray();
+      res.send(categories);
+    });
+
     // post product
-    app.post("/products", async (res, res) => {
+    app.post("/products", async (req, res) => {
       const product = req.body;
       const result = await productsCollection.insertOne(product);
+      res.send(result);
+    });
+
+    // get buyers
+    app.get("/buyers", async (req, res) => {
+      const query = { role: "buyer" };
+      const buyers = await userCollection.find(query).toArray();
+      res.send(buyers);
+    });
+
+    // delete buyer
+    app.delete("/buyers/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: ObjectId(id) };
+      const result = await userCollection.deleteOne(query);
+      res.send(result);
+    });
+
+    // get sellers
+    app.get("/sellers", async (req, res) => {
+      const query = { role: "seller" };
+      const sellers = await userCollection.find(query).toArray();
+      res.send(sellers);
+    });
+
+    // delete seller
+    app.delete("/sellers/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: ObjectId(id) };
+      const result = await userCollection.deleteOne(query);
       res.send(result);
     });
   } finally {
