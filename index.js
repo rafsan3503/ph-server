@@ -33,6 +33,8 @@ async function run() {
     const productsCollection = client.db("phonomania").collection("products");
     // category collection
     const categoryCollection = client.db("phonomania").collection("categories");
+    // my orders collection
+    const orderCollection = client.db("phonomania").collection("orders");
 
     // set user and send jwt token
     app.post("/users", async (req, res) => {
@@ -73,9 +75,16 @@ async function run() {
       res.send(result);
     });
 
+    // post orders
+    app.post("/orders", async (req, res) => {
+      const order = req.body;
+      const result = await orderCollection.insertOne(order);
+      res.send(result);
+    });
+
     // get buyers
     app.get("/buyers", async (req, res) => {
-      const query = { role: "buyer" };
+      const query = { role: "Buyer" };
       const buyers = await userCollection.find(query).toArray();
       res.send(buyers);
     });
@@ -90,7 +99,7 @@ async function run() {
 
     // get sellers
     app.get("/sellers", async (req, res) => {
-      const query = { role: "seller" };
+      const query = { role: "Seller" };
       const sellers = await userCollection.find(query).toArray();
       res.send(sellers);
     });
@@ -101,6 +110,31 @@ async function run() {
       const query = { _id: ObjectId(id) };
       const result = await userCollection.deleteOne(query);
       res.send(result);
+    });
+
+    // verify seller
+    app.put("/sellers/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: ObjectId(id) };
+      const options = { upsert: true };
+      const updateDoc = {
+        $set: {
+          verified: true,
+        },
+      };
+      const result = await userCollection.updateOne(query, updateDoc, options);
+      res.send(result);
+    });
+
+    // check verify seller
+    app.get("/verify", async (req, res) => {
+      const email = req.query.email;
+      const query = { email: email };
+      const user = await userCollection.findOne(query);
+      if (user?.verified === true) {
+        return res.send({ isVerified: true });
+      }
+      res.send({ isVerified: false });
     });
   } finally {
   }
