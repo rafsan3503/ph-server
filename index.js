@@ -27,7 +27,10 @@ const client = new MongoClient(uri, {
 // run function
 async function run() {
   try {
+    // user collection
     const userCollection = client.db("phonomania").collection("users");
+    // products collection
+    const productsCollection = client.db("phonomania").collection("products");
 
     // set user and send jwt token
     app.post("/users", async (req, res) => {
@@ -44,6 +47,13 @@ async function run() {
       }
       const result = await userCollection.insertOne(user);
       res.send({ result, token });
+    });
+
+    // post product
+    app.post("/products", async (res, res) => {
+      const product = req.body;
+      const result = await productsCollection.insertOne(product);
+      res.send(result);
     });
   } finally {
   }
