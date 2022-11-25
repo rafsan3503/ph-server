@@ -16,6 +16,21 @@ app.get("/", (req, res) => {
   res.send("Phonomania is running");
 });
 
+// jwt verify
+const verifyJwt = (req, res, next) => {
+  const authToken = req.headers.authorization;
+  if (!authToken) {
+    return res.status(401).send({ message: "unauthorized access" });
+  }
+  jwt.verify(authToken, process.env.ACCESS_TOKEN, (err, decoded) => {
+    if (err) {
+      return res.status(401).send({ message: "invalid token" });
+    }
+    req.decoded = decoded;
+    next();
+  });
+};
+
 // mongodb connection
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.nk3n7xe.mongodb.net/?retryWrites=true&w=majority`;
@@ -79,6 +94,13 @@ async function run() {
       res.send(products);
     });
 
+    // get advertised product
+    app.get("/advertised", async (req, res) => {
+      const query = { advertisement: true, salesStatus: "available" };
+      const products = await productsCollection.find(query).toArray();
+      res.send(products);
+    });
+
     // post product
     app.post("/products", async (req, res) => {
       const product = req.body;
@@ -91,6 +113,20 @@ async function run() {
       const id = req.params.id;
       const query = { _id: ObjectId(id) };
       const result = await productsCollection.deleteOne(query);
+      res.send(result);
+    });
+
+    // report product
+    app.put("/products/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: ObjectId(id) };
+      console.log(query);
+      const updateDoc = {
+        $set: {
+          report: true,
+        },
+      };
+      const result = await productsCollection.updateOne(query, updateDoc);
       res.send(result);
     });
 
@@ -130,7 +166,7 @@ async function run() {
     });
 
     // get orders
-    app.get("/orders", async (req, res) => {
+    app.get("/orders", verifyJwt, async (req, res) => {
       const email = req.query.email;
       const query = { email: email };
       const orders = await orderCollection.find(query).toArray();
@@ -240,6 +276,13 @@ async function run() {
         return res.send({ isVerified: true });
       }
       res.send({ isVerified: false });
+    });
+
+    // get reported products
+    app.get("/reported", async (req, res) => {
+      const query = { report: true };
+      const products = await productsCollection.find(query).toArray();
+      res.send(products);
     });
   } finally {
   }
