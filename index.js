@@ -5,6 +5,7 @@ const jwt = require("jsonwebtoken");
 const port = process.env.PORT || 5000;
 require("dotenv").config();
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
+const stripe = require("stripe")(process.env.STRIPE_KEY);
 
 // middleWare
 app.use(cors());
@@ -35,6 +36,8 @@ async function run() {
     const categoryCollection = client.db("phonomania").collection("categories");
     // my orders collection
     const orderCollection = client.db("phonomania").collection("orders");
+    // payment collection
+    const paymentsCollection = client.db("phonomania").collection("payments");
 
     // set user and send jwt token
     app.post("/users", async (req, res) => {
@@ -78,10 +81,74 @@ async function run() {
     // post orders
     app.post("/orders", async (req, res) => {
       const order = req.body;
+      const productId = order.productId;
+      const query = { productId: productId };
+      const exitsBooking = await orderCollection.findOne(query);
+      if (exitsBooking) {
+        return res.send({
+          error: true,
+          message: "You already booked this product",
+        });
+      }
       const result = await orderCollection.insertOne(order);
       res.send(result);
     });
 
+    // get orders
+    app.get("/orders", async (req, res) => {
+      const email = req.query.email;
+      const query = { email: email };
+      const orders = await orderCollection.find(query).toArray();
+      res.send(orders);
+    });
+
+    // get single order
+    app.get("/orders/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: ObjectId(id) };
+      const order = await orderCollection.findOne(query);
+      res.send(order);
+    });
+
+    // create payment intent
+    app.post("/create-payment-intent", async (req, res) => {
+      const booking = req.body;
+      const price = booking.price;
+      const amount = price * 1000;
+      const paymentIntent = await stripe.paymentIntents.create({
+        currency: "usd",
+        amount,
+        payment_method_types: ["card"],
+      });
+      res.send({ clientSecret: paymentIntent.client_secret });
+    });
+
+    // create and update payment
+    app.post("/payments", async (req, res) => {
+      const payment = req.body;
+      const id = payment.bookingId;
+      const productId = payment.productId;
+      const query = { _id: ObjectId(productId) };
+      const filter = { _id: ObjectId(id) };
+      const options = { upsert: true };
+      const updateDoc = {
+        $set: {
+          paid: true,
+        },
+      };
+      const updateResult = await productsCollection.updateOne(
+        query,
+        updateDoc,
+        options
+      );
+      const updateOrder = await orderCollection.updateOne(
+        filter,
+        updateDoc,
+        options
+      );
+      const result = await paymentsCollection.insertOne(payment);
+      res.send({ result, updateResult });
+    });
     // get buyers
     app.get("/buyers", async (req, res) => {
       const query = { role: "Buyer" };
