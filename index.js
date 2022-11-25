@@ -38,6 +38,8 @@ async function run() {
     const orderCollection = client.db("phonomania").collection("orders");
     // payment collection
     const paymentsCollection = client.db("phonomania").collection("payments");
+    // sold item collection
+    const soldItemsCollection = client.db("phonomania").collection("soldItems");
 
     // set user and send jwt token
     app.post("/users", async (req, res) => {
@@ -66,7 +68,7 @@ async function run() {
     // get products by category id
     app.get("/categories/:id", async (req, res) => {
       const id = req.params.id;
-      const query = { categoryId: ObjectId };
+      const query = { categoryId: id };
       const products = await productsCollection.find(query).toArray();
       res.send(products);
     });
@@ -82,7 +84,8 @@ async function run() {
     app.post("/orders", async (req, res) => {
       const order = req.body;
       const productId = order.productId;
-      const query = { productId: productId };
+      const email = order.email;
+      const query = { productId: productId, email: email };
       const exitsBooking = await orderCollection.findOne(query);
       if (exitsBooking) {
         return res.send({
@@ -136,18 +139,17 @@ async function run() {
           paid: true,
         },
       };
-      const updateResult = await productsCollection.updateOne(
-        query,
-        updateDoc,
-        options
-      );
+      const getSoldProduct = await productsCollection.findOne(query);
+      console.log(getSoldProduct);
+      const updateResult = await productsCollection.deleteOne(query);
       const updateOrder = await orderCollection.updateOne(
         filter,
         updateDoc,
         options
       );
       const result = await paymentsCollection.insertOne(payment);
-      res.send({ result, updateResult });
+
+      res.send({ result, updateResult, updateOrder });
     });
     // get buyers
     app.get("/buyers", async (req, res) => {
