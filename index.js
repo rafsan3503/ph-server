@@ -209,7 +209,7 @@ async function run() {
     });
 
     // create payment intent
-    app.post("/create-payment-intent", async (req, res) => {
+    app.post("/create-payment-intent", verifyJwt, async (req, res) => {
       const booking = req.body;
       const price = booking.price;
       const amount = price * 1000;
@@ -222,7 +222,7 @@ async function run() {
     });
 
     // create and update payment
-    app.post("/payments", async (req, res) => {
+    app.post("/payments", verifyJwt, async (req, res) => {
       const payment = req.body;
       const id = payment.bookingId;
       const productId = payment.productId;
@@ -251,7 +251,7 @@ async function run() {
       res.send({ result, updateResult, updateOrder });
     });
     // get buyers
-    app.get("/buyers", async (req, res) => {
+    app.get("/buyers", verifyJwt, async (req, res) => {
       const query = { role: "Buyer" };
       const buyers = await userCollection.find(query).toArray();
       res.send(buyers);
