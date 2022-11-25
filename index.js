@@ -71,6 +71,30 @@ async function run() {
       res.send({ result, token });
     });
 
+    // check admin
+    app.get("/users/admin/:email", async (req, res) => {
+      const email = req.params.email;
+      const query = { email: email };
+      const admin = await userCollection.findOne(query);
+
+      if (admin?.role === "admin") {
+        return res.send({ isAdmin: true });
+      }
+      res.send({ isAdmin: false });
+    });
+
+    // check seller
+    app.get("/users/Seller/:email", async (req, res) => {
+      const email = req.params.email;
+      const query = { email: email };
+      const admin = await userCollection.findOne(query);
+
+      if (admin?.role === "Seller") {
+        return res.send({ isSeller: true });
+      }
+      res.send({ isSeller: false });
+    });
+
     // get categories
     app.get("/categories", async (req, res) => {
       const query = {};
@@ -120,7 +144,6 @@ async function run() {
     app.put("/products/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: ObjectId(id) };
-      console.log(query);
       const updateDoc = {
         $set: {
           report: true,
@@ -131,7 +154,7 @@ async function run() {
     });
 
     // advertise product
-    app.put("/products/:id", async (req, res) => {
+    app.put("/advertised/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: ObjectId(id) };
       const options = { upsert: true };
@@ -167,7 +190,11 @@ async function run() {
 
     // get orders
     app.get("/orders", verifyJwt, async (req, res) => {
+      const decodedEmail = req.decoded.email;
       const email = req.query.email;
+      if (email !== decodedEmail) {
+        return res.status(403).send({ message: "Forbidden access" });
+      }
       const query = { email: email };
       const orders = await orderCollection.find(query).toArray();
       res.send(orders);
