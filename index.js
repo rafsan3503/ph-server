@@ -38,8 +38,6 @@ async function run() {
     const orderCollection = client.db("phonomania").collection("orders");
     // payment collection
     const paymentsCollection = client.db("phonomania").collection("payments");
-    // sold item collection
-    const soldItemsCollection = client.db("phonomania").collection("soldItems");
 
     // set user and send jwt token
     app.post("/users", async (req, res) => {
@@ -68,7 +66,15 @@ async function run() {
     // get products by category id
     app.get("/categories/:id", async (req, res) => {
       const id = req.params.id;
-      const query = { categoryId: id };
+      const query = { categoryId: id, salesStatus: "available" };
+      const products = await productsCollection.find(query).toArray();
+      res.send(products);
+    });
+
+    // get products for my products
+    app.get("/products", async (req, res) => {
+      const email = req.query.email;
+      const query = { sellerEmail: email };
       const products = await productsCollection.find(query).toArray();
       res.send(products);
     });
@@ -77,6 +83,32 @@ async function run() {
     app.post("/products", async (req, res) => {
       const product = req.body;
       const result = await productsCollection.insertOne(product);
+      res.send(result);
+    });
+
+    // delete product
+    app.delete("/products/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: ObjectId(id) };
+      const result = await productsCollection.deleteOne(query);
+      res.send(result);
+    });
+
+    // advertise product
+    app.put("/products/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: ObjectId(id) };
+      const options = { upsert: true };
+      const updateDoc = {
+        $set: {
+          advertisement: true,
+        },
+      };
+      const result = await productsCollection.updateOne(
+        query,
+        updateDoc,
+        options
+      );
       res.send(result);
     });
 
@@ -137,11 +169,15 @@ async function run() {
       const updateDoc = {
         $set: {
           paid: true,
+          salesStatus: "sold",
         },
       };
-      const getSoldProduct = await productsCollection.findOne(query);
-      console.log(getSoldProduct);
-      const updateResult = await productsCollection.deleteOne(query);
+
+      const updateResult = await productsCollection.updateOne(
+        query,
+        updateDoc,
+        options
+      );
       const updateOrder = await orderCollection.updateOne(
         filter,
         updateDoc,
