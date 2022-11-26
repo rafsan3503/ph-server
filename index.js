@@ -53,6 +53,8 @@ async function run() {
     const orderCollection = client.db("phonomania").collection("orders");
     // payment collection
     const paymentsCollection = client.db("phonomania").collection("payments");
+    // reort collection
+    const reportCollection = client.db("phonomania").collection("reported");
 
     // set user and send jwt token
     app.post("/users", async (req, res) => {
@@ -95,6 +97,18 @@ async function run() {
       res.send({ isSeller: false });
     });
 
+    // check buyer
+    app.get("/users/buyer/:email", async (req, res) => {
+      const email = req.params.email;
+      const query = { email: email };
+      const buyer = await userCollection.findOne(query);
+
+      if (buyer?.role === "Buyer") {
+        return res.send({ isBuyer: true });
+      }
+      res.send({ isBuyer: false });
+    });
+
     // get categories
     app.get("/categories", async (req, res) => {
       const query = {};
@@ -111,7 +125,7 @@ async function run() {
     });
 
     // get products for my products
-    app.get("/products", async (req, res) => {
+    app.get("/products", verifyJwt, async (req, res) => {
       const email = req.query.email;
       const query = { sellerEmail: email };
       const products = await productsCollection.find(query).toArray();
@@ -143,6 +157,19 @@ async function run() {
     // report product
     app.put("/products/:id", async (req, res) => {
       const id = req.params.id;
+      const reportInfo = req.body.body;
+      const email = req.body.body.email;
+      const productId = req.body.body.productId;
+      const filter = { email: email, productId: productId };
+      const checkReport = await reportCollection.findOne(filter);
+      if (checkReport) {
+        return res.send({
+          error: true,
+          message: "You have already reported this product!!",
+        });
+      }
+      const reportAdded = await reportCollection.insertOne(reportInfo);
+      console.log(reportAdded);
       const query = { _id: ObjectId(id) };
       const updateDoc = {
         $set: {
@@ -201,7 +228,7 @@ async function run() {
     });
 
     // get single order
-    app.get("/orders/:id", async (req, res) => {
+    app.get("/orders/:id", verifyJwt, async (req, res) => {
       const id = req.params.id;
       const query = { _id: ObjectId(id) };
       const order = await orderCollection.findOne(query);
@@ -266,7 +293,7 @@ async function run() {
     });
 
     // get sellers
-    app.get("/sellers", async (req, res) => {
+    app.get("/sellers", verifyJwt, async (req, res) => {
       const query = { role: "Seller" };
       const sellers = await userCollection.find(query).toArray();
       res.send(sellers);
@@ -306,7 +333,7 @@ async function run() {
     });
 
     // get reported products
-    app.get("/reported", async (req, res) => {
+    app.get("/reported", verifyJwt, async (req, res) => {
       const query = { report: true };
       const products = await productsCollection.find(query).toArray();
       res.send(products);
