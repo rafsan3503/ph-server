@@ -181,7 +181,7 @@ async function run() {
     });
 
     // advertise product
-    app.put("/advertised/:id", async (req, res) => {
+    app.put("/advertised/:id", verifyJwt, async (req, res) => {
       const id = req.params.id;
       const query = { _id: ObjectId(id) };
       const options = { upsert: true };
@@ -228,7 +228,7 @@ async function run() {
     });
 
     // get single order
-    app.get("/orders/:id", verifyJwt, async (req, res) => {
+    app.get("/orders/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: ObjectId(id) };
       const order = await orderCollection.findOne(query);
@@ -285,7 +285,7 @@ async function run() {
     });
 
     // delete buyer
-    app.delete("/buyers/:id", async (req, res) => {
+    app.delete("/buyers/:id", verifyJwt, async (req, res) => {
       const id = req.params.id;
       const query = { _id: ObjectId(id) };
       const result = await userCollection.deleteOne(query);
@@ -300,7 +300,7 @@ async function run() {
     });
 
     // delete seller
-    app.delete("/sellers/:id", async (req, res) => {
+    app.delete("/sellers/:id", verifyJwt, async (req, res) => {
       const id = req.params.id;
       const query = { _id: ObjectId(id) };
       const result = await userCollection.deleteOne(query);
@@ -308,7 +308,7 @@ async function run() {
     });
 
     // verify seller
-    app.put("/sellers/:id", async (req, res) => {
+    app.put("/sellers/:id", verifyJwt, async (req, res) => {
       const id = req.params.id;
       const query = { _id: ObjectId(id) };
       const options = { upsert: true };
