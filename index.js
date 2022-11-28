@@ -183,7 +183,7 @@ async function run() {
     });
 
     // delete product
-    app.delete("/products/:id", verifyJwt, verifySeller, async (req, res) => {
+    app.delete("/products/:id", verifyJwt, async (req, res) => {
       const id = req.params.id;
       const query = { _id: ObjectId(id) };
       const result = await productsCollection.deleteOne(query);
